@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.integrate import solve_ivp
+import json  # Add import for JSON to create CZML
 
 # rocket inputs
 # modelling the saturn V 
@@ -127,6 +128,69 @@ print(sol)
 
 Rearraytheta = np.linspace(0, 2*np.pi,100)
 Rearray = np.full((100,1), Re/1000)
+
+# Generate CZML data
+czml = [
+    {
+        "id": "document",
+        "name": "Saturn V Trajectory",
+        "version": "1.0",
+        "clock": {
+            "interval": f"{t[0]}Z/{t[-1]}Z",
+            "currentTime": f"{t[0]}Z",
+            "multiplier": 1,
+            "range": "LOOP_STOP",
+            "step": "SYSTEM_CLOCK_MULTIPLIER"
+        }
+    }
+]
+
+# Add trajectory polyline
+positions = []
+for i in range(len(t)):
+    positions.extend([theta[i], htot[i] * 1000])  # Longitude, Altitude in meters
+
+czml.append({
+    "id": "trajectory",
+    "name": "Rocket Trajectory",
+    "polyline": {
+        "positions": {
+            "cartographicDegrees": positions
+        },
+        "material": {
+            "solidColor": {
+                "color": {
+                    "rgba": [255, 0, 0, 255]  # Red color
+                }
+            }
+        },
+        "width": 2
+    }
+})
+
+# Add stage information
+stages = [
+    {"id": "stage1", "name": "Stage 1", "start": 0, "end": tburn1},
+    {"id": "stage2", "name": "Stage 2", "start": tburn1, "end": tburn1 + tburn2},
+    {"id": "stage3_burn1", "name": "Stage 3 Burn 1", "start": tburn1 + tburn2 + tcoast, "end": tburn1 + tburn2 + tcoast + tburn3_1},
+    {"id": "stage3_coast", "name": "Stage 3 Coast", "start": tburn1 + tburn2 + tcoast + tburn3_1, "end": tburn1 + tburn2 + tcoast + tburn3_1 + tcoast3},
+    {"id": "stage3_burn2", "name": "Stage 3 Burn 2", "start": tburn1 + tburn2 + tcoast + tburn3_1 + tcoast3, "end": tburn1 + tburn2 + tcoast + tburn3_1 + tcoast3 + tburn3_2}
+]
+
+for stage in stages:
+    czml.append({
+        "id": stage["id"],
+        "name": stage["name"],
+        "availability": f"{stage['start']}Z/{stage['end']}Z",
+        "description": f"{stage['name']} active from {stage['start']}s to {stage['end']}s"
+    })
+
+# Write CZML to file
+czml_file_path = "/Users/kennethras/Documents/GitHub/calculation/saturn_v_trajectory.czml"
+with open(czml_file_path, "w") as czml_file:
+    json.dump(czml, czml_file, indent=2)
+
+print(f"CZML file written to {czml_file_path}")
 
 # Plotting the results
 plt.figure(figsize=(12, 10))

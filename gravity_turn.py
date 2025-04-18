@@ -25,8 +25,8 @@ mpl = 43500  # kg payload mass
 tburn1 = 168  # s burn time
 Thrust = 34500000  # N thrust
 m_dot = mprop / tburn1  # kg/s propellant mass flow rate
-tcoast = 4
-
+tcoast = 0 # (seconds)
+ 
 # Stage 2
 diam2 = 10.0584  # m
 mstruc2 = 36000  # kg structural mass
@@ -35,6 +35,7 @@ tburn2 = 366  # s burn time
 Thrusts2 = 4400000  # N thrust
 m_dot2 = mprop2 / tburn2  # kg/s propellant mass flow rate
 m0s2 = mstruc2 + mprop2 + mpl  # total mass at the start of stage 2
+tcoast2 = 0 # (seconds) - Second stage ignition followed shortly after separation
 
 # Stage 3
 diam3 = 6.604  # m diameter of stage 3 (21.7 ft)
@@ -42,7 +43,7 @@ mstruc3 = 10000  # kg structural mass
 mprop3 = 108000  # kg propellant mass
 tburn3_1 = 144  # s first burn duration
 tburn3_2 = 336  # s second burn duration
-tcoast3 = 6  # s coasting time between burns
+tcoast3 = 9840 # s coasting time between burns
 Thrust3 = 1003345 # N thrust for stage 3 (225,000 lbf)
 m_dot3 = mprop3 / (tburn3_1 + tburn3_2) # kg/s propellant mass flow rate for stage 3 
 m0s3 = mstruc3 + mprop3 + mpl  # total mass at the start of stage 3
@@ -53,15 +54,15 @@ m0 = mprop + mprop2 + mstruc + mstruc2 + mprop3 + mstruc3 + mpl # total lift-off
 
 # Pitchover and Simulation Parameters
 hturn = 130  # m pitchover height
-t_max = 8000  # s simulation duration
+t_max = 20000  # s simulation duration
 v0 = 0  # m/s initial velocity
-psi0 = 0.03 * deg  # rad initial flight path angle
+psi0 = 0.035 * deg  # rad initial flight path angle
 theta0 = 0  # rad initial downrange angle
 h0 = 0  # m initial altitude
 
 def derivatives(t,y):
-    v = y[0]
-    psi = y[1]
+    v = y[0] # m/s
+    psi = y[1] # radians
     theta = y[2]
     h = y[3]
     # determine gravity and drag
@@ -89,7 +90,7 @@ def derivatives(t,y):
     elif t < tburn1 + tburn2 + tcoast + tburn3_1 + tcoast3:  # Coasting between stage 3 burns
         m = m0s3 - m_dot3 * tburn3_1  # Mass after first stage 3 burn
         T = 0  # Coas ting, so thrust is 0
-    elif t < tburn1 + tburn2 + tcoast3 + tburn3_1 + tcoast3 + tburn3_2:  # Second burn of stage 3
+    elif t < tburn1 + tburn2 + tcoast + tburn3_1 + tcoast3 + tburn3_2:  # Second burn of stage 3
         m = m0s3 - m_dot3 * (t - tburn1 - tburn2 - tcoast - tburn3_1 - tcoast3)
         T = Thrust3
     else:
