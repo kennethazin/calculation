@@ -5,35 +5,59 @@ from scipy.integrate import solve_ivp
 # rocket inputs
 # modelling the saturn V 
 
+# Constants
 omega = 7.2921159e-5  # rad/s Earth's angular velocity
-
 Re = 6371000  # m Earth's radius
 g0 = 9.81  # m/s² standard gravitational acceleration
-
-diam  = 10.1 # m rocket diameter https://rockets.fandom.com/wiki/Saturn_V
-A = np.pi/4*(diam)**2 # m^2 frontal area
-CD = 0.515 # Drag coefficient https://space.stackexchange.com/questions/12649/how-can-i-estimate-the-coefficient-of-drag-on-a-saturn-v-rocket-a-simulator-or
-mprop = 2900000 # kg propellant mass
-mpl = 28801 # kg payload mass (Example value, please replace with actual CSM + Lunar Module + Expendables  mass if known)
-mstruc = 2278059 # kg structure mass
-m0 = mprop + mstruc + mpl # total lift off mass (kg)
-tburn = 162  # Burn time (s), the duration for which the rocket's engines are actively burning fuel
-m_dot = mprop / tburn  # kg/s propellant mass flow rate
-Thrust = 34028895 # N rocket thrust of Saturn V
-hturn = 130 # m pitchover height
-
-# differential equation inputs
-t_max = 8000 # s, how long the sim runs
-t = np.linspace(0,t_max, 100000)
-v0 = 0 # m/s initial velocity
-deg = np.pi / 180  # Conversion factor from degrees to radians
-psi0 = 0.3 * deg  # rad initial flight path angle
-theta0 = 0 # rad initial downrange angle
-h0 = 0 # km initial altitude
 rho0 = 1.225  # kg/m³ sea-level air density
 hscale = 11100  # m scale height for Earth's atmosphere
+deg = np.pi / 180  # Conversion factor from degrees to radians
+
+# Rocket Geometry
+diam = 10.0584  # m (33 ft converted to meters)
+A = np.pi / 4 * (diam)**2  # m² frontal area
+CD = 0.515  # Drag coefficient https://space.stackexchange.com/questions/12649/how-can-i-estimate-the-coefficient-of-drag-on-a-saturn-v-rocket-a-simulator-or
+
+# Stage 1
+mprop = 2077000  # kg propellant mass
+mstruc = 137000  # kg structural mass
+mpl = 43500  # kg payload mass
+tburn1 = 168  # s burn time
+Thrust = 34500000  # N thrust
+m_dot = mprop / tburn1  # kg/s propellant mass flow rate
+tcoast = 4
+
+# Stage 2
+diam2 = 10.0584  # m
+mstruc2 = 36000  # kg structural mass
+mprop2 = 444000  # kg propellant mass
+tburn2 = 366  # s burn time
+Thrusts2 = 4400000  # N thrust
+m_dot2 = mprop2 / tburn2  # kg/s propellant mass flow rate
+m0s2 = mstruc2 + mprop2 + mpl  # total mass at the start of stage 2
+
+# Stage 3
+diam3 = 6.604  # m diameter of stage 3 (21.7 ft)
+mstruc3 = 10000  # kg structural mass
+mprop3 = 108000  # kg propellant mass
+tburn3_1 = 144  # s first burn duration
+tburn3_2 = 336  # s second burn duration
+tcoast3 = 6  # s coasting time between burns
+Thrust3 = 1003345 # N thrust for stage 3 (225,000 lbf)
+m_dot3 = mprop3 / (tburn3_1 + tburn3_2) # kg/s propellant mass flow rate for stage 3 
+m0s3 = mstruc3 + mprop3 + mpl  # total mass at the start of stage 3
+
+# Total Initial Mass
+m0 = mprop + mprop2 + mstruc + mstruc2 + mprop3 + mstruc3 + mpl # total lift-off mass (kg)
 
 
+# Pitchover and Simulation Parameters
+hturn = 130  # m pitchover height
+t_max = 8000  # s simulation duration
+v0 = 0  # m/s initial velocity
+psi0 = 0.03 * deg  # rad initial flight path angle
+theta0 = 0  # rad initial downrange angle
+h0 = 0  # m initial altitude
 
 def derivatives(t,y):
     v = y[0]
@@ -50,20 +74,26 @@ def derivatives(t,y):
     # print('D, D)
     # if statements to determine the thrust and mass
     # update thrust and mass based on if vehicle is still burning
-    if t < tburn:
+    if t < tburn1:
         m = m0 - m_dot*t
         T = Thrust
     elif t < tburn1 + tburn2: # after stage 1 burn, start burning stage 2
         m = m0s2 - m_dot2 * (t-tburn1) # set mass of vehicle, subtracting out original burn time
         T = Thrusts2 # set thrust to stage 2 thrust
-    elif t < tburn + tburn2 + tcoast: # coasting stage
+    elif t < tburn1 + tburn2 + tcoast: # coasting stage
         m = m0s2 - m_dot2 * (tburn2) # spacecraft mass after full second burn
         T = 0 # coasting, so thrust is 0
-    elif t < tburn + tburn2 + tcoast + tburn3: # the final circularisiation burn aka stage 3 burn
-        m = m0s3 - m_dot3 * (t - tburn1 - tburn2 - tcoast)  # set mass of vehicle, subtracting out original burn time and coast time
-        T = Thrust3 # stage 2 thrust
+    elif t < tburn1 + tburn2 + tcoast + tburn3_1:  # First burn of stage 3
+        m = m0s3 - m_dot3 * (t - tburn1 - tburn2 - tcoast)
+        T = Thrust3
+    elif t < tburn1 + tburn2 + tcoast + tburn3_1 + tcoast3:  # Coasting between stage 3 burns
+        m = m0s3 - m_dot3 * tburn3_1  # Mass after first stage 3 burn
+        T = 0  # Coas ting, so thrust is 0
+    elif t < tburn1 + tburn2 + tcoast3 + tburn3_1 + tcoast3 + tburn3_2:  # Second burn of stage 3
+        m = m0s3 - m_dot3 * (t - tburn1 - tburn2 - tcoast - tburn3_1 - tcoast3)
+        T = Thrust3
     else:
-        m = m0s2 - mprops3 # final spacecraft mass
+        m = mstruc3 + mpl # final spacecraft mass // is it this? m0s2 - mprop3 
         T = 0 # no longer burning
 
     ## differential equations
@@ -80,7 +110,7 @@ def derivatives(t,y):
         psi_dot = phi_dot - theta_dot
     return [v_dot, psi_dot, theta_dot, h_dot]
 
-sol = solve_ivp(derivatives, [t[0], t[-1]], [v0,psi0,theta0,h0], max_step=1)
+sol = solve_ivp(derivatives, [0, t_max], [v0,psi0,theta0,h0], max_step=1)
 
 vrel = sol.y[0]/1000 # % km/s velocity WITHOUT rotation of earth
 vabs = vrel+Re*omega / 1000
