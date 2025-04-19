@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.128/Build/Cesium/Cesium.js"></script>
+    <link
+      href="https://cesium.com/downloads/cesiumjs/releases/1.128/Build/Cesium/Widgets/widgets.css"
+      rel="stylesheet"
+    />
+    <link href="styles.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="cesiumContainer" style="width: 100%; height: 90vh"></div>
+    <script src="index.js" type="module"></script>
+    <div id="controls" style="text-align: center; margin-top: 10px">
+      <button id="satelliteButton">Satellites</button>
+      <button id="droneButton">Drone</button>
+      <button id="trackingAuto">Tracking: Auto-detect</button>
+      <button id="trackingInertial">Tracking: Inertial</button>
+      <button id="trackingVelocity">Tracking: Velocity</button>
+      <button id="trackingENU">Tracking: East-North-Up</button>
+    </div>
+  </body>
+</html>
